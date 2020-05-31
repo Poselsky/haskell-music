@@ -19,7 +19,7 @@ outputFilePath :: FilePath
 outputFilePath = "output.bin"
 
 volume :: Float
-volume = 0.2
+volume = 0.3
 
 sampleRate :: Samples
 sampleRate = 4800.0
@@ -28,7 +28,7 @@ pitchStandard :: Hz
 pitchStandard = 440.0
 
 bpm :: Beats
-bpm = 120.0
+bpm = 90.0
 
 beatDuration :: Seconds
 beatDuration = 60.0 / bpm
@@ -53,12 +53,14 @@ freq hz duration =
     adsrRatio:: Int -> (Float, Float)
     adsrRatio index = (width !! index, atan $ ((height !! (index + 1)) - (height !! index)) / ((width !! (index + 1)) - (width !! (index))))
       where
-        width = zipWith (\x len -> (x / len):: Float) [20,10,50,20,0] $ repeat $ int2Float $ length output
+        width = zipWith (\x len -> (x / len):: Float) [15,10,55,20,0] $ repeat $ int2Float outputLength
         height = [0.0,1.0, 0.6, 0.6, 0]
 
+    outputLength:: Int
+    outputLength = length output
 
     adsr:: [Float]
-    adsr = fst $ foldr foldHelper ([], 0.0) $ zip [0..] $ take (length output) $ repeat 1
+    adsr = fst $ foldr foldHelper ([], 0.0) $ zip [0..] $ take (outputLength) $ repeat 1
       where
         foldHelper:: (Int, Float) -> ([Float], Float) -> ([Float], Float)
         foldHelper (ind, val) (accList, previousVal)
@@ -68,7 +70,7 @@ freq hz duration =
           | index >  (fst $ adsrRatio 2)                                 = ([previousVal + (pointStep * (sin $ snd $ adsrRatio 3))] ++ accList, previousVal + (pointStep * (sin $ snd $ adsrRatio 3)))
             where 
               index = int2Float ind
-              pointStep = 1 / (int2Float (length output))
+              pointStep = 1 / (int2Float (outputLength))
 
 
 adsr:: [Float]
@@ -85,18 +87,87 @@ adsr = fst $ foldr foldHelper ([], 0.0) $ zip [0..] $ take 10 $ repeat 1
       adsrRatio:: Int -> (Float, Float)
       adsrRatio index = (adsrRatio' !! index, (adsrRatio' !! (index + 1)) / ((adsrRatio' !! (index + 1)) - (adsrRatio' !! (index))))
         where
-          adsrRatio' = zipWith (\x len -> (x / len):: Float) [20,10,50,20] $ repeat $ int2Float 10
+          adsrRatio' = zipWith (\x len -> (x / len):: Float) [25,15,40,20] $ repeat $ int2Float 10
 
-wave :: [Pulse]
-wave =
+awaken :: [Pulse]
+awaken =
   concat
-    [ zipWith3 (\x y z -> x + y + z) (note (-2) 5) (note 2 5) (note 5 5) ]
+    [ 
+        noteF5 0.5
+      , noteF5 0.25
+      , noteF5 0.25
+      , noteF5 0.25
+      , noteD5Eb5 0.25
+      , noteF5 0.25
+      , noteF5Gb5 0.25
+      , noteG5Ab5 0.25
+      , noteA5 0.25
+      , noteG5Ab5 0.25
+      , noteF5Gb5 0.25
+      , noteF5 0.5
+      , noteF5 0.5
+
+      , noteZero 0.5
+
+      , noteF5 0.5
+      , noteF5 0.25
+      , noteF5 0.25
+      , noteF5 0.25
+      , noteD5Eb5 0.25
+      , noteF5 0.25
+      , noteF5Gb5 0.25
+      , noteG5Ab5 0.25
+      , noteA5 0.25
+      , noteG5Ab5 0.25
+      , noteF5Gb5 0.25
+      , noteF5 0.5
+      , noteD5Eb5 0.5
+
+      , noteZero 0.5
+
+      , noteF5 0.25
+      , noteF5 0.25
+      , noteF5 0.25
+      , noteD5Eb5 0.25
+      , noteF5 0.25
+      , noteF5Gb5 0.25
+      , noteG5Ab5 0.25
+      , noteA5 0.25
+      , noteG5Ab5 0.25
+      , noteF5Gb5 0.25
+      , noteF5 0.5
+      , noteF5 0.5
+      , noteF5 0.25
+      , noteF5 0.5
+      , noteF5Gb5 0.25
+      , noteF5Gb5 0.5
+      , noteG5Ab5 0.25
+      , noteG5Ab5 0.25
+      , noteZero 0.25
+      , noteA5 0.25
+      , noteA5 0.5
+      , noteC5 0.25
+      , noteA5 0.25
+      , noteG5Ab5 0.25
+      , noteF5Gb5 0.25
+
+    ]
 
 hehehe :: [Pulse]
 hehehe = concat [ note 0 0.25
                 , note 0 0.25
                 , note 12 0.5
-                , note 7 (0.5 + 0.25)
+                , note 7 0.75
+                , note 6 0.5
+                , note 5 0.5
+                , note 3 0.5
+                , note 0 0.25
+                , note 3 0.25
+                , note 5 0.25
+                , note 0 0.25
+                , note 0 0.25
+                , note 12 0.5
+                , note 7 0.75
                 , note 6 0.5
                 , note 5 0.5
                 , note 3 0.5
@@ -106,7 +177,7 @@ hehehe = concat [ note 0 0.25
                 ]
 
 save :: FilePath -> IO ()
-save filePath = B.writeFile filePath $ B.toLazyByteString $ fold $ map B.floatLE hehehe
+save filePath = B.writeFile filePath $ B.toLazyByteString $ fold $ map B.floatLE awaken
 
 play :: IO ()
 play = do
@@ -116,3 +187,29 @@ play = do
 
 main :: IO ()
 main = save outputFilePath
+
+
+
+
+
+noteZero :: Seconds -> [Pulse]
+noteZero beats = freq 0 (beats * beatDuration)
+
+
+noteF5:: Seconds -> [Pulse]
+noteF5 beats = freq (f 8) (beats * beatDuration)
+
+noteD5Eb5:: Seconds -> [Pulse]
+noteD5Eb5 beats = freq (f 7) (beats * beatDuration)
+
+noteF5Gb5:: Seconds -> [Pulse]
+noteF5Gb5 beats = freq (f 9) (beats * beatDuration)
+
+noteG5Ab5:: Seconds -> [Pulse]
+noteG5Ab5 beats = freq (f 11) (beats * beatDuration)
+
+noteA5:: Seconds -> [Pulse]
+noteA5 beats = freq (f 12) (beats * beatDuration)
+
+noteC5:: Seconds -> [Pulse]
+noteC5 beats = freq (f 15) (beats * beatDuration)
